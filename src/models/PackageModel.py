@@ -3,7 +3,6 @@ from pydantic import Field, validator
 from typing import List, Optional, Union, Literal
 from sdks.novavision.src.base.model import Package, Image, Inputs, Configs, Outputs, Response, Request, Output, Input, Config
 
-
 class InputImage(Input):
     name: Literal["inputImage"] = "inputImage"
     value: Union[List[Image], Image]
@@ -20,9 +19,8 @@ class InputImage(Input):
     class Config:
         title = "Image"
 
-
 class OutputImage(Output):
-    name: Literal["outputImage"] = "outputImage"
+    name: Literal["outputImage"] = "outputImage" #configste ne yazıldıysa burada da gerçekleştiği gibi aynı olmalı
     value: Union[List[Image],Image]
     type: str = "object"
 
@@ -36,7 +34,6 @@ class OutputImage(Output):
 
     class Config:
         title = "Image"
-
 
 class KeepSideFalse(Config):
     name: Literal["False"] = "False"
@@ -57,7 +54,6 @@ class KeepSideTrue(Config):
     class Config:
         title = "Enable"
 
-
 class KeepSideBBox(Config):
     """
         Rotate image without catting off sides.
@@ -70,8 +66,7 @@ class KeepSideBBox(Config):
     class Config:
         title = "Keep Sides"
 
-
-class Degree(Config):
+class Degree(Config): # Config class inherit edenler için: name value type field
     """
         Positive angles specify counterclockwise rotation while negative angles indicate clockwise rotation.
     """
@@ -79,47 +74,42 @@ class Degree(Config):
     value: int = Field(ge=-359.0, le=359.0,default=0)
     type: Literal["number"] = "number"
     field: Literal["textInput"] = "textInput"
-    placeHolder: Literal["[-359, 359]"] = "[-359, 359]"
 
     class Config:
         title = "Angle"
 
-
-class PackageInputs(Inputs):
+class ExecutionInputs(Inputs): # inputlar yazılır
     inputImage: InputImage
 
-
-class PackageConfigs(Configs):
+class ExecutionConfigs(Configs): # düğüme tıklanınca sağda gelen ayarlar, hangi sırayla yazdığımız arayüze yansır
     degree: Degree
     drawBBox: KeepSideBBox
 
-
-class PackageOutputs(Outputs):
-    outputImage: OutputImage
-
-
-class PackageRequest(Request):
-    inputs: Optional[PackageInputs]
-    configs: PackageConfigs
+class ExecutionRequest(Request): # sistem kodu
+    inputs: Optional[ExecutionInputs]
+    configs: ExecutionConfigs
 
     class Config:
         json_schema_extra = {
             "target": "configs"
         }
 
+class ExecutionOutputs(Outputs): # executor un outputları yazılır, birden fazla olabilir
+    outputImage: OutputImage
+    #outputText: OutputText
+    #outputDetection vs.
 
-class PackageResponse(Response):
-    outputs: PackageOutputs
+class ExecutionResponse(Response): # sistem kodu
+    outputs: ExecutionOutputs
 
-
-class PackageExecutor(Config):
-    name: Literal["Package"] = "Package"
-    value: Union[PackageRequest, PackageResponse]
+class Execution(Config): #executor ı tanımlar
+    name: Literal["Execution"] = "Execution"
+    value: Union[ExecutionRequest, ExecutionResponse]
     type: Literal["object"] = "object"
     field: Literal["option"] = "option"
 
     class Config:
-        title = "Package"
+        title: "Package"
         json_schema_extra = {
             "target": {
                 "value": 0
@@ -127,24 +117,22 @@ class PackageExecutor(Config):
         }
 
 
-class ConfigExecutor(Config):
+class ConfigExecutor(Config): # executorları gösterir
     name: Literal["ConfigExecutor"] = "ConfigExecutor"
-    value: Union[PackageExecutor]
+    value: Union[Execution] # [A,B,C]
     type: Literal["executor"] = "executor"
-    field: Literal["dependentDropdownlist"] = "dependentDropdownlist"
+    field: Literal["dependentDropdownList"] = "dependentDropdownList"
 
     class Config:
-        title = "Task"
-        json_schema_extra = {
+        title: "Task"
+        json_schema_extra = { # bu blok, eğer birden fazla executor varsa, silinmeli
             "target": "value"
         }
 
-
-class PackageConfigs(Configs):
+class PackageConfigs(Configs): # sistemsel bir kod, değişmez
     executor: ConfigExecutor
-
 
 class PackageModel(Package):
     configs: PackageConfigs
-    type: Literal["component"] = "component"
+    type: Literal["component"] = "component" # capsule component widget
     name: Literal["NovaDemopack"] = "NovaDemopack"
