@@ -9,8 +9,8 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../'))
 from sdks.novavision.src.media.image import Image
 from sdks.novavision.src.base.component import Component
 from sdks.novavision.src.helper.executor import Executor
-from components.TargetNavigationPackage.src.utils.response import build_pose_estimator_response
-from components.TargetNavigationPackage.src.models.PackageModel import PackageModel
+from components.NovaDemopack.src.utils.response import build_pose_estimator_response
+from components.NovaDemopack.src.models.PackageModel import PackageModel
 
 
 class PoseEstimator(Component):
