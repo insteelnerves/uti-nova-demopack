@@ -29,7 +29,6 @@ class TargetDetector(Component):
         self.filtering_mode = self.request.get_param("ConfigFilteringMode")
         self.output_detections = []
         
-        # Bootstrap'tan detector'ları al
         self.hog = self.bootstrap.get('hog')
         self.face_cascade = self.bootstrap.get('face_cascade')
 
@@ -39,11 +38,9 @@ class TargetDetector(Component):
         OpenCV detector'ları bir kez yükler ve tüm frame'ler için bellekte tutar.
         """
         bootstrap_state = {}
-        # HOG People Detector (harici dosya gerektirmez, OpenCV içinde gömülü)
         bootstrap_state['hog'] = cv2.HOGDescriptor()
         bootstrap_state['hog'].setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
         
-        # Haar Cascade for face detection (OpenCV içinde gömülü XML)
         cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         bootstrap_state['face_cascade'] = cv2.CascadeClassifier(cascade_path)
         
@@ -79,7 +76,6 @@ class TargetDetector(Component):
         self.output_detections = []
         params = self._get_filter_params()
         
-        # 1. HOG People Detection (İnsan tespiti)
         if self.hog is not None:
             boxes, weights = self.hog.detectMultiScale(
                 cv_img, 
@@ -89,7 +85,6 @@ class TargetDetector(Component):
             )
             
             for (x, y, box_w, box_h), weight in zip(boxes, weights):
-                # Normalize coordinates (0.0 - 1.0)
                 norm_left = x / w
                 norm_top = y / h
                 norm_width = box_w / w
@@ -108,9 +103,7 @@ class TargetDetector(Component):
                 )
                 self.output_detections.append(detection)
         
-        # 2. Haar Cascade Face Detection (Yüz tespiti)
         if self.face_cascade is not None:
-            # Haar Cascade gri görüntü bekler
             gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
             faces = self.face_cascade.detectMultiScale(
                 gray, 
@@ -120,7 +113,6 @@ class TargetDetector(Component):
             )
             
             for (x, y, box_w, box_h) in faces:
-                # Normalize coordinates
                 norm_left = x / w
                 norm_top = y / h
                 norm_width = box_w / w
@@ -133,13 +125,12 @@ class TargetDetector(Component):
                         width=norm_width,
                         height=norm_height
                     ),
-                    confidence=0.9,  # Haar Cascade confidence döndürmez, sabit değer
+                    confidence=0.9, 
                     classLabel="face",
                     classId=1
                 )
                 self.output_detections.append(detection)
         
-        # 3. Filtreleme Uygulama
         if params["mode"] == "standard":
             self.output_detections = [
                 d for d in self.output_detections if d.confidence >= params["threshold"]
@@ -150,16 +141,13 @@ class TargetDetector(Component):
             ]
 
     def run(self):
-        # Görüntüyü Redis'ten çek
         img_obj = Image.get_frame(img=self.input_image, redis_db=self.redis_db)
         
         if img_obj is not None and hasattr(img_obj, 'value'):
             cv_img = img_obj.value
-            # uint8'e çevir (OpenCV için gerekli)
             if cv_img.dtype != np.uint8:
                 cv_img = cv_img.astype(np.uint8)
             
-            # Gerçek tespiti yap
             self.process_detection(cv_img)
         else:
             self.output_detections = []
