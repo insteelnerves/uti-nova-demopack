@@ -39,8 +39,7 @@ class PoseEstimator(Component):
         """
         if detection is None:
             return None, 0.0, "unknown"
-
-        # 1. Bounding Box'ı çek (Objeden veya Dict'ten)
+            
         bbox = None
         if hasattr(detection, 'boundingBox'):
             bbox = detection.boundingBox
@@ -50,7 +49,6 @@ class PoseEstimator(Component):
         if bbox is None:
             return None, 0.0, "unknown"
 
-        # 2. Koordinatları çek
         if hasattr(bbox, 'left'):
             left, top, width, height = bbox.left, bbox.top, bbox.width, bbox.height
         elif isinstance(bbox, dict):
@@ -61,7 +59,6 @@ class PoseEstimator(Component):
         else:
             return None, 0.0, "unknown"
 
-        # 3. Confidence ve Class Label'ı çek
         if hasattr(detection, 'confidence'):
             conf = detection.confidence
             cls_label = getattr(detection, 'classLabel', 'unknown')
@@ -91,7 +88,6 @@ class PoseEstimator(Component):
 
         bbox, confidence, class_label = detection_info
 
-        # Tespit varsa merkezini hesapla, yoksa görselin ortasını al
         if bbox:
             center_x = bbox['left'] + bbox['width'] / 2
             center_y = bbox['top'] + bbox['height'] / 2
@@ -117,7 +113,6 @@ class PoseEstimator(Component):
         bbox, confidence, class_label = detection_info
         
         if bbox:
-            # Gerçek tespit kutusunu piksele çevir
             left = int(bbox['left'] * w)
             top = int(bbox['top'] * h)
             right = int((bbox['left'] + bbox['width']) * w)
@@ -125,7 +120,6 @@ class PoseEstimator(Component):
             cx = (left + right) // 2
             cy = (top + bottom) // 2
         else:
-            # Fallback: Görselin ortası
             cx, cy = w // 2, h // 2
             box_w, box_h = int(w * 0.4), int(h * 0.4)
             left = cx - box_w // 2
@@ -133,7 +127,6 @@ class PoseEstimator(Component):
             right = left + box_w
             bottom = top + box_h
 
-        # Çizimleri yap
         cv2.rectangle(cv_img, (left, top), (right, bottom), (0, 0, 255), 3)
         cv2.drawMarker(cv_img, (cx, cy), (0, 255, 255), cv2.MARKER_CROSS, 40, 3)
         
@@ -145,24 +138,18 @@ class PoseEstimator(Component):
         return cv_img
 
     def run(self):
-        # Görüntüyü Redis'ten çek
         img_obj = Image.get_frame(img=self.input_image, redis_db=self.redis_db)
         
-        # inputDetections listesi veya tekil dict olabilir, ilkini al
         detection = None
         if self.input_detections:
             if isinstance(self.input_detections, list) and len(self.input_detections) > 0:
                 detection = self.input_detections[0]
             elif isinstance(self.input_detections, dict):
                 detection = self.input_detections
-
-        # Hem dict hem obje uyumlu bilgi çıkarma
         detection_info = self._extract_detection_info(detection)
         
-        # Mesafe hesapla
         distance = self.calculate_pose(detection_info)
 
-        # Görüntü üzerine çizim yap
         if img_obj is not None and hasattr(img_obj, 'value'):
             cv_img = img_obj.value
             if cv_img.dtype != np.uint8:
@@ -171,7 +158,6 @@ class PoseEstimator(Component):
             self.draw_pose_info(cv_img, distance, detection_info)
             img_obj.value = cv_img
 
-        # İşlenen görüntüyü Redis'e yaz
         self.output_image = Image.set_frame(
             img=img_obj,
             package_uID=self.uID,
